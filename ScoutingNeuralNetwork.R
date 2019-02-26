@@ -260,7 +260,8 @@ for(i in 3:36) {
 }
 
 input_train = matrix(nrow = nrow(data_input)/6, ncol = 17*6)
-data_input = as.matrix(data_input)
+data_input = data.matrix(data_input)
+data_input
 index = 1
 index_data_first = 1
 index_data_second = 17
@@ -276,7 +277,7 @@ for(i in 1:nrow(data_input)) {
   index_data_second = index_data_second + 17
 }
 
-input_train
+
 
 numTrainingExamples = nrow(input_train)
 numLayers = 3
