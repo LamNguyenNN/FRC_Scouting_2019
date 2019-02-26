@@ -227,7 +227,7 @@ test = function (input_mat, output_mat, weightList, biasList) {
 }
 
 library(googlesheets)
-gs_sheet = gs_title("FRC 2019 Scouting")
+gs_sheet = gs_title("FRC 2019 Match Scouting")
 scout_sheet = gs_read(gs_sheet)
 data_input = data.frame(alliance = integer(),
                         crossed_line = double(),
@@ -275,6 +275,8 @@ for(i in 1:nrow(data_input)) {
   index_data_first = index_data_first + 17
   index_data_second = index_data_second + 17
 }
+
+input_train
 
 numTrainingExamples = nrow(input_train)
 numLayers = 3
