@@ -244,7 +244,7 @@ data_output = data.frame(winner = integer())
 data_input_col = c(1, 3:12, 14:23)
 index_input = 1
 index_output = 1
-for(i in 3:36) {
+for(i in 3:64) {
   if(is.na(scout_sheet[i, 1])) {
     if(i %% 7 == 2) {
       next
@@ -329,6 +329,22 @@ for(i in 1:nrow(output)) {
   }
 }
 
+input_test = input[-train_index,]
+
+output = matrix(data_output[-train_index,])
+output_test = matrix(nrow = nrow(input_test), ncol = 2)
+for(i in 1:nrow(output)) {
+  if(output[i,1] == 0) {
+    output_test[i,] = c(1,0)
+  } else {
+    output_test[i,] = c(0,1)
+  }
+}
+
+input_train
+output_train
+input_test
+output_test
 
 numTrainingExamples = nrow(input_train)
 numLayers = 3
@@ -340,6 +356,7 @@ topology = c(ncol(input_train),74,2)
 weightList = initWeightMats(topology)
 biasList = initBiasMats(topology, numTrainingExamples)
 outputList = forwardProp(input_train, weightList, biasList)
+outputList$output
 
 parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test)
 
