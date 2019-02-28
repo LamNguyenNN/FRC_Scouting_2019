@@ -71,8 +71,7 @@ forwardProp = function(inputMat, weightMats, biasMats) {
 }
 
 MSECost = function(targetOutput, netOutput) {
-  error = (1/nrow(targetOutput)) * sum( (1/ncol(targetOutput))*(rowSums((targetOutput - netOutput) ^ 2)) )
-  return(error)
+  error = (1/nrow(targetOutput)) * sum( (1/ncol(targetOutput))*(rowSums((targetOutput - netOutput) ^ 2)) ) return(error)
 }
 
 CrossEntropyCost = function(targetOutput, netOutput) {
@@ -187,8 +186,6 @@ SGD = function(inputMat, weightList, biasList, outputList, targetOutput, learnin
       }
       accuracy = calcAccuracy (round(newOutput$output), origOutput_mat)
       accuracy_test = test(input_test, output_test, weightList, newBiasList)
-      plot(epochNum, accuracy, type="b")
-      plot(epochNum, accuracy_test, type="b")
       currCost = CrossEntropyCost(origOutput_mat, newOutput$output)
       cat(epochNum, " ", "train: ", as.numeric(accuracy), ", test:  ", as.numeric(accuracy_test), " ", currCost)
       if(abs(currCost - prevCost) < .0001 && F) {
