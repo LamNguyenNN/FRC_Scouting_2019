@@ -262,18 +262,20 @@ for(i in 3:36) {
 input = matrix(nrow = nrow(data_input)/6, ncol = 17*6)
 data_input = data.matrix(data_input)
 
-max_hatches_lv1 = 24
+max_hatches_center = 16
+max_hatches_lv1 = 8
 max_hatches_lv2 = 8
 max_hatches_lv3 = 8
 
 # normalizing "cross line"
 data_input[,2] = data_input[,2] *.5 
 # normalizing hatches
+data_input[,c]
 data_input[,c(3,10)] = data_input[,c(3,10)] / max_hatches_lv1 
 data_input[,c(4,11)] = data_input[,c(4,11)] / max_hatches_lv2
 data_input[,c(5,12)] = data_input[,c(5,12)] / max_hatches_lv3
 
-max_balls_lv1 = 
+max_balls_
 
 data_input[,16] = data_input[,16] * .5 # normalizing "climb level"
 
