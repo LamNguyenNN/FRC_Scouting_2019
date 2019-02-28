@@ -231,14 +231,14 @@ gs_sheet = gs_title("FRC 2019 Match Scouting")
 scout_sheet = gs_read(gs_sheet)
 data_input = data.frame(alliance = integer(),
                         crossed_line = double(),
-                        hatches_auto_lv1 = double(), hatches_auto_lv2 = double(), hatches_auto_lv3 = double(),
-                        balls_auto_lv1 = double(), balls_auto_lv2 = double(), balls_auto_lv3 = double(),
+                        hatches_auto_center = double(), hatches_auto_lv1 = double(), hatches_auto_lv2 = double(), hatches_auto_lv3 = double(),
+                        balls_auto_center = double(), balls_auto_lv1 = double(), balls_auto_lv2 = double(), balls_auto_lv3 = double(),
                         pre_telop_move = integer(),
-                        hatches_teleop_lv1 = double(), hatches_teleop_lv2 = double(), hatches_teleop_lv3 = double(),
-                        balls_teleop_lv1 = double(), balls_teleop_lv2 = double(), balls_teleop_lv3 = double(),
+                        hatches_teleop_center = double(), hatches_teleop_lv1 = double(), hatches_teleop_lv2 = double(), hatches_teleop_lv3 = double(),
+                        balls_teleop_center = double(), balls_teleop_lv1 = double(), balls_teleop_lv2 = double(), balls_teleop_lv3 = double(),
                         climb_level = double(),
                         disconnect = integer(), stringsAsFactors = F)
-data_col = c(1, 3:10, 12:19)
+data_col = c(1, 3:12, 14:23)
 index = 1
 for(i in 3:36) {
   if(is.na(scout_sheet[i, 1])) {
@@ -259,9 +259,25 @@ for(i in 3:36) {
   index = index + 1
 }
 
-input_train = matrix(nrow = nrow(data_input)/6, ncol = 17*6)
+input = matrix(nrow = nrow(data_input)/6, ncol = 17*6)
 data_input = data.matrix(data_input)
-data_input
+
+max_hatches_lv1 = 24
+max_hatches_lv2 = 8
+max_hatches_lv3 = 8
+
+# normalizing "cross line"
+data_input[,2] = data_input[,2] *.5 
+# normalizing hatches
+data_input[,c(3,10)] = data_input[,c(3,10)] / max_hatches_lv1 
+data_input[,c(4,11)] = data_input[,c(4,11)] / max_hatches_lv2
+data_input[,c(5,12)] = data_input[,c(5,12)] / max_hatches_lv3
+
+max_balls_lv1 = 
+
+data_input[,16] = data_input[,16] * .5 # normalizing "climb level"
+
+
 index = 1
 index_data_first = 1
 index_data_second = 17
@@ -271,11 +287,18 @@ for(i in 1:nrow(data_input)) {
     index_data_first = 1
     index_data_second = 17
   }
-  input_train[index, c(index_data_first : index_data_second)] = as.numeric(data_input[i,])
+  input[index, c(index_data_first : index_data_second)] = as.numeric(data_input[i,])
 
   index_data_first = index_data_first + 17
   index_data_second = index_data_second + 17
 }
+
+train_index = sample(1:nrow(input), round(.75 * nrow(input)))
+
+input_train = input[train_index,]
+input_train [,c(2,19,36,53,70,87)] = input_train [,c(2,19,36,53,70,87)] * .5 
+
+data_input
 
 
 
