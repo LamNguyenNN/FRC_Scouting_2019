@@ -229,6 +229,7 @@ test = function (input_mat, output_mat, weightList, biasList) {
 library(googlesheets)
 gs_sheet = gs_title("FRC 2019 Match Scouting")
 scout_sheet = gs_read(gs_sheet)
+
 data_input = data.frame(alliance = integer(),
                         crossed_line = double(),
                         hatches_auto_center = double(), hatches_auto_lv1 = double(), hatches_auto_lv2 = double(), hatches_auto_lv3 = double(),
@@ -238,8 +239,11 @@ data_input = data.frame(alliance = integer(),
                         balls_teleop_center = double(), balls_teleop_lv1 = double(), balls_teleop_lv2 = double(), balls_teleop_lv3 = double(),
                         climb_level = double(),
                         disconnect = integer(), stringsAsFactors = F)
-data_col = c(1, 3:12, 14:23)
-index = 1
+data_output = data.frame(winner = integer())
+
+data_input_col = c(1, 3:12, 14:23)
+index_input = 1
+index_output = 1
 for(i in 3:36) {
   if(is.na(scout_sheet[i, 1])) {
     if(i %% 7 == 2) {
@@ -254,13 +258,19 @@ for(i in 3:36) {
   } else if (scout_sheet[i, 1] == "Red") {
     scout_sheet[i, 1] = 1
   }
+ 
+  data_input[index_input,] = scout_sheet[i, data_input_col]
   
-  data_input[index,] = scout_sheet[i, data_col]
-  index = index + 1
+  if(!is.na(scout_sheet[i, ncol(scout_sheet)])) {
+    data_output[index_output,] = scout_sheet[i, ncol(scout_sheet)]
+    index_output = index_output + 1
+  }
+  
+  index_input = index_input + 1
 }
 
-input = matrix(nrow = nrow(data_input)/6, ncol = 17*6)
 data_input = data.matrix(data_input)
+data_output = data.matrix(data_output)
 
 max_hatches_center = 16
 max_hatches_lv1 = 8
@@ -270,38 +280,54 @@ max_hatches_lv3 = 8
 # normalizing "cross line"
 data_input[,2] = data_input[,2] *.5 
 # normalizing hatches
-data_input[,c]
-data_input[,c(3,10)] = data_input[,c(3,10)] / max_hatches_lv1 
-data_input[,c(4,11)] = data_input[,c(4,11)] / max_hatches_lv2
-data_input[,c(5,12)] = data_input[,c(5,12)] / max_hatches_lv3
+data_input[,c(3,12)] = ifelse(data_input[,c(3,12)] > max_hatches_center, 1, data_input[,c(3,12)]/ max_hatches_center)
+data_input[,c(4,13)] = ifelse(data_input[,c(4,13)] > max_hatches_lv1, 1, data_input[,c(4,13)] / max_hatches_lv1 )
+data_input[,c(5,14)] = ifelse(data_input[,c(5,14)] > max_hatches_lv2, 1, data_input[,c(5,14)] / max_hatches_lv2 )
+data_input[,c(6,15)] = ifelse(data_input[,c(6,15)] > max_hatches_lv3, 1, data_input[,c(6,15)] / max_hatches_lv3 )
 
-max_balls_
+max_balls_center = 16
+max_balls_lv1 = 8
+max_balls_lv2 = 8
+max_balls_lv3 = 8
 
-data_input[,16] = data_input[,16] * .5 # normalizing "climb level"
+data_input[,c(7,16)] = ifelse(data_input[,c(7,16)] > max_balls_center, 1, data_input[,c(7,16)]/ max_balls_center)
+data_input[,c(8,17)] = ifelse(data_input[,c(8,17)] > max_balls_lv1, 1, data_input[,c(8,17)] / max_balls_lv1 )
+data_input[,c(9,18)] = ifelse(data_input[,c(9,18)] > max_balls_lv2, 1, data_input[,c(9,18)] / max_balls_lv2 )
+data_input[,c(10,19)] = ifelse(data_input[,c(10,19)] > max_balls_lv3, 1, data_input[,c(10,19)] / max_balls_lv3 )
 
+data_input[,20] = data_input[,20] * .5 # normalizing "climb level"
 
+input = matrix(nrow = nrow(data_input)/6, ncol = ncol(data_input)*6)
+dim(input)
 index = 1
 index_data_first = 1
-index_data_second = 17
+index_data_second = ncol(data_input)
 for(i in 1:nrow(data_input)) {
   if(i %% 6 == 1 && i != 1) {
     index = index + 1
     index_data_first = 1
-    index_data_second = 17
+    index_data_second = ncol(data_input)
   }
-  input[index, c(index_data_first : index_data_second)] = as.numeric(data_input[i,])
+ 
+  input[index, c(index_data_first : index_data_second)] = data_input[i,]
 
-  index_data_first = index_data_first + 17
-  index_data_second = index_data_second + 17
+  index_data_first = index_data_first + ncol(data_input)
+  index_data_second = index_data_second + ncol(data_input)
 }
 
 train_index = sample(1:nrow(input), round(.75 * nrow(input)))
 
 input_train = input[train_index,]
-input_train [,c(2,19,36,53,70,87)] = input_train [,c(2,19,36,53,70,87)] * .5 
 
-data_input
-
+output = matrix(data_output[train_index,])
+output_train = matrix(nrow = nrow(input_train), ncol = 2)
+for(i in 1:nrow(output)) {
+  if(output[i,1] == 0) {
+    output_train[i,] = c(1,0)
+  } else {
+    output_train[i,] = c(0,1)
+  }
+}
 
 
 numTrainingExamples = nrow(input_train)
@@ -309,7 +335,7 @@ numLayers = 3
 eluAlpha = .7
 learningRate = .01
 epoch = 100
-topology = c(102,72,2)
+topology = c(ncol(input_train),74,2)
 
 weightList = initWeightMats(topology)
 biasList = initBiasMats(topology, numTrainingExamples)
