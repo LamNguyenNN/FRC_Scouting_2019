@@ -187,7 +187,7 @@ SGD = function(inputMat, weightList, biasList, outputList, targetOutput, learnin
       accuracy = calcAccuracy (round(newOutput$output), origOutput_mat)
       accuracy_test = test(input_test, output_test, weightList, newBiasList)
       currCost = CrossEntropyCost(origOutput_mat, newOutput$output)
-      cat(epochNum, " ", "train: ", as.numeric(accuracy), ", test:  ", as.numeric(accuracy_test), " ", currCost)
+      cat(epochNum, " ", "train: ", as.numeric(accuracy), ", test:  ", as.numeric(accuracy_test), " ", currCost, "\n")
       if(abs(currCost - prevCost) < .0001 && F) {
         break
       } else {
@@ -241,7 +241,7 @@ data_output = data.frame(winner = integer())
 data_input_col = c(1, 3:12, 14:23)
 index_input = 1
 index_output = 1
-for(i in 3:64) {
+for(i in 3:421) {
   if(is.na(scout_sheet[i, 1])) {
     if(i %% 7 == 2) {
       next
@@ -267,6 +267,7 @@ for(i in 3:64) {
 }
 
 data_input = data.matrix(data_input)
+data_input
 data_output = data.matrix(data_output)
 
 max_hatches_center = 16
@@ -295,7 +296,6 @@ data_input[,c(10,19)] = ifelse(data_input[,c(10,19)] > max_balls_lv3, 1, data_in
 data_input[,20] = data_input[,20] * .5 # normalizing "climb level"
 
 input = matrix(nrow = nrow(data_input)/6, ncol = ncol(data_input)*6)
-dim(input)
 index = 1
 index_data_first = 1
 index_data_second = ncol(data_input)
@@ -312,9 +312,12 @@ for(i in 1:nrow(data_input)) {
   index_data_second = index_data_second + ncol(data_input)
 }
 
+input
+
 train_index = sample(1:nrow(input), round(.75 * nrow(input)))
 
 input_train = input[train_index,]
+input
 
 output = matrix(data_output[train_index,])
 output_train = matrix(nrow = nrow(input_train), ncol = 2)
@@ -338,22 +341,16 @@ for(i in 1:nrow(output)) {
   }
 }
 
-input_train
-output_train
-input_test
-output_test
-
 numTrainingExamples = nrow(input_train)
 numLayers = 3
 eluAlpha = .7
-learningRate = .01
+learningRate = .005
 epoch = 100
 topology = c(ncol(input_train),74,2)
 
 weightList = initWeightMats(topology)
 biasList = initBiasMats(topology, numTrainingExamples)
 outputList = forwardProp(input_train, weightList, biasList)
-outputList$output
 
 parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test)
 
