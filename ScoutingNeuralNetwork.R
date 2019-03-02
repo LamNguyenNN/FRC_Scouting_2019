@@ -228,36 +228,34 @@ gs_sheet = gs_title("FRC 2019 Match Scouting")
 scout_sheet = gs_read(gs_sheet)
 
 data_input = data.frame(alliance = integer(),
-                        crossed_line = double(),
+                        hatches_setup = integer(), balls_setup = integer(),
+                        cross_line = double(),
                         hatches_auto_center = double(), hatches_auto_lv1 = double(), hatches_auto_lv2 = double(), hatches_auto_lv3 = double(),
                         balls_auto_center = double(), balls_auto_lv1 = double(), balls_auto_lv2 = double(), balls_auto_lv3 = double(),
-                        pre_telop_move = integer(),
+                        prep_teleop = integer(),
                         hatches_teleop_center = double(), hatches_teleop_lv1 = double(), hatches_teleop_lv2 = double(), hatches_teleop_lv3 = double(),
                         balls_teleop_center = double(), balls_teleop_lv1 = double(), balls_teleop_lv2 = double(), balls_teleop_lv3 = double(),
                         climb_level = double(),
-                        disconnect = integer(), stringsAsFactors = F)
+                        radio_problems = integer(), stringsAsFactors = F)
 data_output = data.frame(winner = integer())
 
-data_input_col = c(1, 3:12, 14:23)
+useful_columns = c(1, 3:24)
+scout_sheet[, 25]
 index_input = 1
 index_output = 1
-for(i in 3:421) {
+for(i in 4:nrow(scout_sheet)) {
   if(is.na(scout_sheet[i, 1])) {
-    if(i %% 7 == 2) {
+    if(i %% 7 == 3) {
       next
-    } else if(scout_sheet[i-1, 1] == 0) {
-      scout_sheet[i, 1] = 0
-    } else if (scout_sheet[i-1, 1] == 1) {
-      scout_sheet[i, 1] = 1
     } 
   } else if(scout_sheet[i, 1] == "Blue") {
     scout_sheet[i, 1] = 0
   } else if (scout_sheet[i, 1] == "Red") {
     scout_sheet[i, 1] = 1
   }
- 
-  data_input[index_input,] = scout_sheet[i, data_input_col]
   
+  data_input[index_input,] = scout_sheet[i, useful_columns]
+ 
   if(!is.na(scout_sheet[i, ncol(scout_sheet)])) {
     data_output[index_output,] = scout_sheet[i, ncol(scout_sheet)]
     index_output = index_output + 1
@@ -267,38 +265,49 @@ for(i in 3:421) {
 }
 
 data_input = data.matrix(data_input)
-data_input
 data_output = data.matrix(data_output)
 
-max_hatches_center = 16
-max_hatches_lv1 = 8
-max_hatches_lv2 = 8
-max_hatches_lv3 = 8
+
+colnames(data_input, prefix="cross_line")
+
+max_hatches_center = 8
+max_hatches_rocket_level = 8
 
 # normalizing "cross line"
-data_input[,2] = data_input[,2] *.5 
+data_input[,"cross_line"] = data_input[,2] *.5 
+
 # normalizing hatches
-data_input[,c(3,12)] = ifelse(data_input[,c(3,12)] > max_hatches_center, 1, data_input[,c(3,12)]/ max_hatches_center)
-data_input[,c(4,13)] = ifelse(data_input[,c(4,13)] > max_hatches_lv1, 1, data_input[,c(4,13)] / max_hatches_lv1 )
-data_input[,c(5,14)] = ifelse(data_input[,c(5,14)] > max_hatches_lv2, 1, data_input[,c(5,14)] / max_hatches_lv2 )
-data_input[,c(6,15)] = ifelse(data_input[,c(6,15)] > max_hatches_lv3, 1, data_input[,c(6,15)] / max_hatches_lv3 )
+data_input[,c("hatches_setup", "hatches_auto_center", "hatches_teleop_center")] = ifelse(
+  data_input[,c("hatches_setup", "hatches_auto_center", "hatches_teleop_center")] > max_hatches_center, 
+  1, data_input[,c("hatches_setup", "hatches_auto_center", "hatches_teleop_center")]/ max_hatches_center)
 
-max_balls_center = 16
-max_balls_lv1 = 8
-max_balls_lv2 = 8
-max_balls_lv3 = 8
+data_input[,c("hatches_auto_lv1", "hatches_auto_lv2", "hatches_auto_lv3", "hatches_teleop_lv1", "hatches_teleop_lv2", "hatches_teleop_lv3")] =
+  ifelse(data_input[,c("hatches_auto_lv1", "hatches_auto_lv2", "hatches_auto_lv3", 
+                       "hatches_teleop_lv1", "hatches_teleop_lv2", "hatches_teleop_lv3")] > max_hatches_rocket_level,
+         1, data_input[,c("hatches_auto_lv1", "hatches_auto_lv2", "hatches_auto_lv3", 
+                         "hatches_teleop_lv1", "hatches_teleop_lv2", "hatches_teleop_lv3")] / max_hatches_rocket_level )
 
-data_input[,c(7,16)] = ifelse(data_input[,c(7,16)] > max_balls_center, 1, data_input[,c(7,16)]/ max_balls_center)
-data_input[,c(8,17)] = ifelse(data_input[,c(8,17)] > max_balls_lv1, 1, data_input[,c(8,17)] / max_balls_lv1 )
-data_input[,c(9,18)] = ifelse(data_input[,c(9,18)] > max_balls_lv2, 1, data_input[,c(9,18)] / max_balls_lv2 )
-data_input[,c(10,19)] = ifelse(data_input[,c(10,19)] > max_balls_lv3, 1, data_input[,c(10,19)] / max_balls_lv3 )
+max_balls_center = 8
+max_balls_rocket_level = 8
 
-data_input[,20] = data_input[,20] * .5 # normalizing "climb level"
+data_input[,c("balls_setup", "balls_auto_center", "balls_teleop_center")] = ifelse(
+  data_input[,c("balls_setup", "balls_auto_center", "balls_teleop_center")] > max_balls_center, 
+  1, data_input[,c("balls_setup", "balls_auto_center", "balls_teleop_center")]/ max_balls_center)
+
+data_input[,c("balls_auto_lv1", "balls_auto_lv2", "balls_auto_lv3", "balls_teleop_lv1", "balls_teleop_lv2", "balls_teleop_lv3")] =
+  ifelse(data_input[,c("balls_auto_lv1", "balls_auto_lv2", "balls_auto_lv3", 
+                       "balls_teleop_lv1", "balls_teleop_lv2", "balls_teleop_lv3")] > max_balls_rocket_level,
+         1, data_input[,c("balls_auto_lv1", "balls_auto_lv2", "balls_auto_lv3", 
+                          "balls_teleop_lv1", "balls_teleop_lv2", "balls_teleop_lv3")] / max_balls_rocket_level )
+
+#normalizing "climb level"
+data_input[,"climb_level"] = data_input[,"climb_level"] / 3 
 
 input = matrix(nrow = nrow(data_input)/6, ncol = ncol(data_input)*6)
 index = 1
 index_data_first = 1
 index_data_second = ncol(data_input)
+
 for(i in 1:nrow(data_input)) {
   if(i %% 6 == 1 && i != 1) {
     index = index + 1
@@ -312,12 +321,9 @@ for(i in 1:nrow(data_input)) {
   index_data_second = index_data_second + ncol(data_input)
 }
 
-input
-
 train_index = sample(1:nrow(input), round(.75 * nrow(input)))
 
 input_train = input[train_index,]
-input
 
 output = matrix(data_output[train_index,])
 output_train = matrix(nrow = nrow(input_train), ncol = 2)
