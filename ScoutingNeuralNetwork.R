@@ -227,7 +227,7 @@ library(googlesheets)
 gs_sheet = gs_title("FRC 2019 Match Scouting")
 scout_sheet = gs_read(gs_sheet)
 
-data_input = data.frame(alliance = integer(),
+data = data.frame(alliance = integer(),
                         hatches_setup = integer(), balls_setup = integer(),
                         cross_line = double(),
                         hatches_auto_center = double(), hatches_auto_lv1 = double(), hatches_auto_lv2 = double(), hatches_auto_lv3 = double(),
@@ -236,13 +236,11 @@ data_input = data.frame(alliance = integer(),
                         hatches_teleop_center = double(), hatches_teleop_lv1 = double(), hatches_teleop_lv2 = double(), hatches_teleop_lv3 = double(),
                         balls_teleop_center = double(), balls_teleop_lv1 = double(), balls_teleop_lv2 = double(), balls_teleop_lv3 = double(),
                         climb_level = double(),
-                        radio_problems = integer(), stringsAsFactors = F)
-data_output = data.frame(winner = integer())
+                        radio_problems = integer(),
+                        winner = integer(), stringsAsFactors = F)
 
-useful_columns = c(1, 3:24)
-scout_sheet[, 25]
+useful_columns = c(1, 3:25)
 index_input = 1
-index_output = 1
 for(i in 4:nrow(scout_sheet)) {
   if(is.na(scout_sheet[i, 1])) {
     if(i %% 7 == 3) {
@@ -254,72 +252,144 @@ for(i in 4:nrow(scout_sheet)) {
     scout_sheet[i, 1] = 1
   }
   
-  data_input[index_input,] = scout_sheet[i, useful_columns]
- 
-  if(!is.na(scout_sheet[i, ncol(scout_sheet)])) {
-    data_output[index_output,] = scout_sheet[i, ncol(scout_sheet)]
-    index_output = index_output + 1
-  }
-  
+  data[index_input,] = scout_sheet[i, useful_columns]
   index_input = index_input + 1
 }
 
-data_input = data.matrix(data_input)
-data_output = data.matrix(data_output)
+data = data.matrix(data)
+data
+#Fixing "NA" in alliances, hatches_setup, balls_setup, output
+for(i in 1:nrow(data)) {
+  if(is.na(data[i, "alliance"])) {
+    if(i %% 6 == 2 || i %% 6 == 3) {
+      data[i, "alliance"] = 1
+    } else if (i %% 6 == 5 || i %% 6 == 0) {
+      data[i, "alliance"] = 0
+    }
+  }
+  
+  if(is.na(data[i, "hatches_setup"]) && is.na(data[i, "balls_setup"])) {
+    if(i %% 6 == 2 || i %% 6 == 5) {
+      data[i, "hatches_setup"] = data[i-1, "hatches_setup"]
+      data[i, "balls_setup"] = data[i-1, "balls_setup"]
+    } else if(i %% 6 == 3 || i %% 6 == 0) {
+      data[i, "hatches_setup"] = data[i-2, "hatches_setup"]
+      data[i, "balls_setup"] = data[i-2, "balls_setup"]
+    } 
+  }
+  
+  if(is.na(data[i, "winner"])) {
+    data[i, "winner"] = data[i-1, "winner"]
+  }
+  
+}
 
+# normalizing "cross line"
+data[,"cross_line"] = data[,"cross_line"] *.5 
 
-colnames(data_input, prefix="cross_line")
-
+# normalizing hatches
 max_hatches_center = 8
 max_hatches_rocket_level = 8
 
-# normalizing "cross line"
-data_input[,"cross_line"] = data_input[,2] *.5 
+data[,c("hatches_setup", "hatches_auto_center", "hatches_teleop_center")] = ifelse(
+  data[,c("hatches_setup", "hatches_auto_center", "hatches_teleop_center")] > max_hatches_center, 
+  1, data[,c("hatches_setup", "hatches_auto_center", "hatches_teleop_center")]/ max_hatches_center)
 
-# normalizing hatches
-data_input[,c("hatches_setup", "hatches_auto_center", "hatches_teleop_center")] = ifelse(
-  data_input[,c("hatches_setup", "hatches_auto_center", "hatches_teleop_center")] > max_hatches_center, 
-  1, data_input[,c("hatches_setup", "hatches_auto_center", "hatches_teleop_center")]/ max_hatches_center)
-
-data_input[,c("hatches_auto_lv1", "hatches_auto_lv2", "hatches_auto_lv3", "hatches_teleop_lv1", "hatches_teleop_lv2", "hatches_teleop_lv3")] =
-  ifelse(data_input[,c("hatches_auto_lv1", "hatches_auto_lv2", "hatches_auto_lv3", 
+data[,c("hatches_auto_lv1", "hatches_auto_lv2", "hatches_auto_lv3", "hatches_teleop_lv1", "hatches_teleop_lv2", "hatches_teleop_lv3")] =
+  ifelse(data[,c("hatches_auto_lv1", "hatches_auto_lv2", "hatches_auto_lv3", 
                        "hatches_teleop_lv1", "hatches_teleop_lv2", "hatches_teleop_lv3")] > max_hatches_rocket_level,
-         1, data_input[,c("hatches_auto_lv1", "hatches_auto_lv2", "hatches_auto_lv3", 
+         1, data[,c("hatches_auto_lv1", "hatches_auto_lv2", "hatches_auto_lv3", 
                          "hatches_teleop_lv1", "hatches_teleop_lv2", "hatches_teleop_lv3")] / max_hatches_rocket_level )
 
 max_balls_center = 8
 max_balls_rocket_level = 8
 
-data_input[,c("balls_setup", "balls_auto_center", "balls_teleop_center")] = ifelse(
-  data_input[,c("balls_setup", "balls_auto_center", "balls_teleop_center")] > max_balls_center, 
-  1, data_input[,c("balls_setup", "balls_auto_center", "balls_teleop_center")]/ max_balls_center)
+data[,c("balls_setup", "balls_auto_center", "balls_teleop_center")] = ifelse(
+  data[,c("balls_setup", "balls_auto_center", "balls_teleop_center")] > max_balls_center, 
+  1, data[,c("balls_setup", "balls_auto_center", "balls_teleop_center")]/ max_balls_center)
 
-data_input[,c("balls_auto_lv1", "balls_auto_lv2", "balls_auto_lv3", "balls_teleop_lv1", "balls_teleop_lv2", "balls_teleop_lv3")] =
-  ifelse(data_input[,c("balls_auto_lv1", "balls_auto_lv2", "balls_auto_lv3", 
+data[,c("balls_auto_lv1", "balls_auto_lv2", "balls_auto_lv3", "balls_teleop_lv1", "balls_teleop_lv2", "balls_teleop_lv3")] =
+  ifelse(data[,c("balls_auto_lv1", "balls_auto_lv2", "balls_auto_lv3", 
                        "balls_teleop_lv1", "balls_teleop_lv2", "balls_teleop_lv3")] > max_balls_rocket_level,
-         1, data_input[,c("balls_auto_lv1", "balls_auto_lv2", "balls_auto_lv3", 
+         1, data[,c("balls_auto_lv1", "balls_auto_lv2", "balls_auto_lv3", 
                           "balls_teleop_lv1", "balls_teleop_lv2", "balls_teleop_lv3")] / max_balls_rocket_level )
 
 #normalizing "climb level"
-data_input[,"climb_level"] = data_input[,"climb_level"] / 3 
+data[,"climb_level"] = data[,"climb_level"] / 3 
 
-input = matrix(nrow = nrow(data_input)/6, ncol = ncol(data_input)*6)
-index = 1
-index_data_first = 1
-index_data_second = ncol(data_input)
+library(gtools)
+permute_matrix = permutations(3, 3)
 
-for(i in 1:nrow(data_input)) {
-  if(i %% 6 == 1 && i != 1) {
-    index = index + 1
-    index_data_first = 1
-    index_data_second = ncol(data_input)
+data_permute = matrix(nrow = nrow(data)*36, ncol = ncol(data))
+
+permute_index1 = 1
+permute_index2 = 1
+index1 = 1
+index2 = 3
+permute_counter1 = 0
+permute_counter2 = 3
+while(index1 <= nrow(data_permute)) {
+  while(permute_index1 <= nrow(permute_matrix)) {
+    while(permute_index2 <= nrow(permute_matrix)) {
+      data_permute[index1:index2,] = data[permute_matrix[permute_index1,] + permute_counter1,] #1 2 3, 7 8 9
+      index1 = index1 + 3
+      index2 = index2 + 3
+      data_permute[index1:index2,] = data[permute_matrix[permute_index2,] + permute_counter2,] #4 5 6, 10 11 12
+      permute_index2 = permute_index2 + 1
+      index1 = index1 + 3
+      index2 = index2 + 3
+    }
+    permute_index1 = permute_index1 + 1
+    permute_index2 = 1
   }
- 
-  input[index, c(index_data_first : index_data_second)] = data_input[i,]
-
-  index_data_first = index_data_first + ncol(data_input)
-  index_data_second = index_data_second + ncol(data_input)
+  permute_counter1 = permute_counter1 + 6
+  perrmute_counter2 = permute_counter2 + 6
+  permute_index1 = 1
 }
+
+data_permute
+
+data_input = matrix(nrow = nrow(data_permute) / 6, ncol = 3 + ((ncol(data_permute)-4)*6) )
+data_output = matrix(nrow = nrow(data_permute) / 6, ncol = 2)
+
+index_data = 1
+index1 = 1
+index2 = 1
+index_permute = 1
+while(index_data <= nrow(data)) {
+  if(index_permute %% 6 == 1) {
+    index2 = index1 + ncol(data_permute) - 2
+    cat(1, " ", index1, " ", index2, "\n")
+    data_input[index_data, index1:index2] = data_permute[index_permute, 1:(ncol(data_permute)-1)]
+    index1 = index2 + 1
+    index_permute = index_permute + 1
+  } else {
+    index2 = index1 + ncol(data_permute) - 5
+    cat("!1", " ", index1, " ", index2, "\n")
+    data_input[index_data, index1:index2] = data_permute[index_permute, 4:(ncol(data_permute)-1)]
+    index1= index2 + 1
+    index_permute = index_permute + 1
+  }
+  if(index1 > ncol(data_input)) {
+    index1 = 1
+    index_data = index_data + 1
+  }
+}
+
+index = 1
+for(i in 1:nrow(data_permute)) {
+  if(i %% 6 == 1) {
+    if(data_permute[i, ncol(data_permute)] == 1) {
+      data_output[index,] = c(0,1)
+    } else if (data_permute[i, ncol(data_permute)] == 0) {
+      data_output[index,] = c(1,0)
+    }
+    index = index + 1
+  }
+}
+
+data_input
+data_output
 
 train_index = sample(1:nrow(input), round(.75 * nrow(input)))
 
