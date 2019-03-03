@@ -114,6 +114,7 @@ SGD = function(inputMat, weightList, biasList, outputList, targetOutput, learnin
   
   while(T) {
     for(trainEx in 1:nrow(targetOutput)) {
+  
       outputList = forwardProp(inputMat, weightList, biasList)
       if(anyNA(outputList$output)) {
         print(outputList$activatedSums)
@@ -174,9 +175,7 @@ SGD = function(inputMat, weightList, biasList, outputList, targetOutput, learnin
       }
       
     }
-    
-    print(epochNum)
-    
+   
     if(epochNum%%10==0 || T)  {
       newOutput = forwardProp(origInput_mat, weightList, biasList)
       #print(round(newOutput$output))
@@ -224,7 +223,7 @@ test = function (input_mat, output_mat, weightList, biasList) {
 }
 
 library(googlesheets)
-gs_sheet = gs_title("FRC 2019 Match Scouting")
+gs_sheet = gs_title("FRC 2019 Match Scouting (network test)")
 scout_sheet = gs_read(gs_sheet)
 
 data = data.frame(alliance = integer(),
@@ -238,18 +237,20 @@ data = data.frame(alliance = integer(),
                         climb_level = double(),
                         radio_problems = integer(),
                         winner = integer(), stringsAsFactors = F)
-
+scout_sheet
 useful_columns = c(1, 3:25)
 index_input = 1
 for(i in 4:nrow(scout_sheet)) {
   if(is.na(scout_sheet[i, 1])) {
-    if(i %% 7 == 3) {
-      next
-    } 
+    data[index_input,] = scout_sheet[i, useful_columns]
+    index_input = index_input + 1
+    next
   } else if(scout_sheet[i, 1] == "Blue") {
     scout_sheet[i, 1] = 0
   } else if (scout_sheet[i, 1] == "Red") {
     scout_sheet[i, 1] = 1
+  } else {
+    next
   }
   
   data[index_input,] = scout_sheet[i, useful_columns]
@@ -283,7 +284,7 @@ for(i in 1:nrow(data)) {
   }
   
 }
-
+data
 # normalizing "cross line"
 data[,"cross_line"] = data[,"cross_line"] *.5 
 
@@ -347,8 +348,6 @@ while(index1 <= nrow(data_permute)) {
   permute_index1 = 1
 }
 
-data_permute
-
 data_input = matrix(nrow = nrow(data_permute) / 6, ncol = 3 + ((ncol(data_permute)-4)*6) )
 data_output = matrix(nrow = nrow(data_permute) / 6, ncol = 2)
 
@@ -356,16 +355,15 @@ index_data = 1
 index1 = 1
 index2 = 1
 index_permute = 1
-while(index_data <= nrow(data)) {
+while(index_data <= nrow(data_input)) {
   if(index_permute %% 6 == 1) {
     index2 = index1 + ncol(data_permute) - 2
-    cat(1, " ", index1, " ", index2, "\n")
+    print(index_data)
     data_input[index_data, index1:index2] = data_permute[index_permute, 1:(ncol(data_permute)-1)]
     index1 = index2 + 1
     index_permute = index_permute + 1
   } else {
     index2 = index1 + ncol(data_permute) - 5
-    cat("!1", " ", index1, " ", index2, "\n")
     data_input[index_data, index1:index2] = data_permute[index_permute, 4:(ncol(data_permute)-1)]
     index1= index2 + 1
     index_permute = index_permute + 1
@@ -388,34 +386,13 @@ for(i in 1:nrow(data_permute)) {
   }
 }
 
-data_input
-data_output
+train_index = sample(1:nrow(data_input), round(.75 * nrow(data_input)))
 
-train_index = sample(1:nrow(input), round(.75 * nrow(input)))
+input_train = data_input[train_index,]
+output_train = data_output[train_index,]
 
-input_train = input[train_index,]
-
-output = matrix(data_output[train_index,])
-output_train = matrix(nrow = nrow(input_train), ncol = 2)
-for(i in 1:nrow(output)) {
-  if(output[i,1] == 0) {
-    output_train[i,] = c(1,0)
-  } else {
-    output_train[i,] = c(0,1)
-  }
-}
-
-input_test = input[-train_index,]
-
-output = matrix(data_output[-train_index,])
-output_test = matrix(nrow = nrow(input_test), ncol = 2)
-for(i in 1:nrow(output)) {
-  if(output[i,1] == 0) {
-    output_test[i,] = c(1,0)
-  } else {
-    output_test[i,] = c(0,1)
-  }
-}
+input_test = data_input[-train_index,]
+output_test = data_output[-train_index,]
 
 numTrainingExamples = nrow(input_train)
 numLayers = 3
@@ -431,8 +408,6 @@ outputList = forwardProp(input_train, weightList, biasList)
 parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test)
 
 test(input_test, output_test, parameters$weights, parameters$biases)
-
-
 
 
 
