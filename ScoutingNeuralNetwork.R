@@ -8,6 +8,10 @@ initWeightMats = function(topo) {
   return (weightMats)
 }
 
+loadWeights = function(weightsCSV) {
+  
+}
+
 initBiasMats = function(topo, numInputSets) {
   i = 1
   biasMats = list()
@@ -141,29 +145,25 @@ SGD = function(inputMat, weightList, biasList, outputList, targetOutput, learnin
       while(synapseIndex > 1) {
         synapseIndex = synapseIndex - 1
         
-        for(i in 1:nrow(gradWeightList[[synapseIndex]])) {
-          for(j in 1:ncol(gradWeightList[[synapseIndex]])) {
-            delta = reluDerivative(outputList$activatedSums[[synapseIndex]][trainEx, j]) * 
-              sum(c(weightList[[synapseIndex+1]][j,]) * c(deltaWeightList[[synapseIndex+1]][j,]))
-            deltaWeightList[[synapseIndex]][i,j] = delta
+        for(i in 1:ncol(gradWeightList[[synapseIndex]])) {
+          delta = reluDerivative(outputList$activatedSums[[synapseIndex]][trainEx, i]) * 
+            sum(c(weightList[[synapseIndex+1]][i,]) * c(deltaWeightList[[synapseIndex+1]][,]))
+          deltaWeightList[[synapseIndex]][,] = delta
             
-            if(synapseIndex == 1) {
-              gradWeightList[[synapseIndex]][i,j] = delta * inputMat[trainEx,i]
+          if(synapseIndex == 1) {
+            gradWeightList[[synapseIndex]][,] = delta * inputMat[trainEx,]
               
-            } else {
-              gradWeightList[[synapseIndex]][i,j] = delta * outputList$activatedSums[[synapseIndex-1]][trainEx, i]
-            }
+          } else {
+            gradWeightList[[synapseIndex]][,] = delta * outputList$activatedSums[[synapseIndex-1]][trainEx, ]
           }
         }
         
-        for(i in 1:nrow(gradBiasList[[synapseIndex]])) {
-          for(j in 1:ncol(gradBiasList[[synapseIndex]])) {
-            delta = reluDerivative(outputList$activatedSums[[synapseIndex]][trainEx, j]) * 
-              sum(c(weightList[[synapseIndex+1]][j,]) * c(deltaWeightList[[synapseIndex+1]][j,]))
-            gradBiasList[[synapseIndex]][i, j] = delta
-          }
+        for(i in 1:ncol(gradBiasList[[synapseIndex]])) {
+          delta = reluDerivative(outputList$activatedSums[[synapseIndex]][trainEx, i]) * 
+            sum(c(weightList[[synapseIndex+1]][i,]) * c(deltaWeightList[[synapseIndex+1]][i,]))
+          gradBiasList[[synapseIndex]][, i] = delta
         }
-        
+  
       }
       
       synapseIndex = length(weightList)
@@ -171,14 +171,12 @@ SGD = function(inputMat, weightList, biasList, outputList, targetOutput, learnin
       for(i in 1:synapseIndex) {
         weightList[[i]] = weightList[[i]] - (learningRate * gradWeightList[[i]])
         biasList[[i]] = biasList[[i]] - (learningRate * gradBiasList[[i]])
-        #print(biasList[i])
       }
       
     }
    
-    if(epochNum%%10==0 || T)  {
+    if(epochNum%%5==0)  {
       newOutput = forwardProp(origInput_mat, weightList, biasList)
-      #print(round(newOutput$output))
       newBiasList = list()
       for(i in 1:length(biasList)) {
         newBiasList[[i]] = biasList[[i]][1,]
@@ -186,8 +184,9 @@ SGD = function(inputMat, weightList, biasList, outputList, targetOutput, learnin
       accuracy = calcAccuracy (round(newOutput$output), origOutput_mat)
       accuracy_test = test(input_test, output_test, weightList, newBiasList)
       currCost = CrossEntropyCost(origOutput_mat, newOutput$output)
-      cat(epochNum, " ", "train: ", as.numeric(accuracy), ", test:  ", as.numeric(accuracy_test), " ", currCost, "\n")
-      if(abs(currCost - prevCost) < .0001 && F) {
+      cat("epoch: ", epochNum, ", ", "train acc: ", as.numeric(accuracy), ", test acc:  ", 
+          as.numeric(accuracy_test), ", loss:", currCost, "\n")
+      if(abs(currCost - prevCost) < .0001 && accuracy > .95) {
         break
       } else {
         prevCost = currCost
@@ -317,6 +316,7 @@ data[,c("balls_auto_lv1", "balls_auto_lv2", "balls_auto_lv3", "balls_teleop_lv1"
 
 #normalizing "climb level"
 data[,"climb_level"] = data[,"climb_level"] / 3 
+data
 
 library(gtools)
 permute_matrix = permutations(3, 3)
@@ -347,7 +347,7 @@ while(index1 <= nrow(data_permute)) {
   perrmute_counter2 = permute_counter2 + 6
   permute_index1 = 1
 }
-
+data_permute
 data_input = matrix(nrow = nrow(data_permute) / 6, ncol = 3 + ((ncol(data_permute)-4)*6) )
 data_output = matrix(nrow = nrow(data_permute) / 6, ncol = 2)
 
@@ -358,7 +358,6 @@ index_permute = 1
 while(index_data <= nrow(data_input)) {
   if(index_permute %% 6 == 1) {
     index2 = index1 + ncol(data_permute) - 2
-    print(index_data)
     data_input[index_data, index1:index2] = data_permute[index_permute, 1:(ncol(data_permute)-1)]
     index1 = index2 + 1
     index_permute = index_permute + 1
@@ -409,5 +408,10 @@ parameters = SGD(input_train, weightList, biasList, outputList, output_train, le
 
 test(input_test, output_test, parameters$weights, parameters$biases)
 
-
-
+for(i in 1:length(parameters$weights)) {
+  write.table(parameters$weights[i], file = paste("weights", i,".csv", sep = ""), row.names = F, col.names = F, sep = " ")
+  write.table(parameters$biases[i], file = paste("biases", i,".csv", sep = ""), row.names = F, col.names = F, sep = " ")
+}
+w = read.csv(file = "weights1.csv", header = F, sep = " ")
+w = data.matrix(w)
+dim(w)
