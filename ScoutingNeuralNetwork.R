@@ -94,9 +94,9 @@ calcAccuracy = function(output, trainOutput) {
   return (accuracy)
 }
 
-SGD = function(inputMat, weightList, biasList, outputList, targetOutput, learningRate, epoch, input_test, output_test) {
-  origInput_mat = inputMat
-  origOutput_mat = targetOutput
+SGD = function(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test) {
+  origInput_mat = input_train
+  origOutput_mat = output_train
   synapseIndex = length(weightList)
   epochNum = 1
   counter = 0
@@ -117,26 +117,26 @@ SGD = function(inputMat, weightList, biasList, outputList, targetOutput, learnin
   }
   
   while(T) {
-    for(trainEx in 1:nrow(targetOutput)) {
-  
-      outputList = forwardProp(inputMat, weightList, biasList)
+    for(trainEx in 1:nrow(output_train)) {
+      outputList = forwardProp(input_train, weightList, biasList)
       if(anyNA(outputList$output)) {
-        print(outputList$activatedSums)
-        print(outputList$unact)
-        print(outputList$output)
-        print("SGD")
+         #print(outputList$activatedSums)
+          #print(outputList$unact)
+          #print(outputList$output)
+          #print("SGD")
+          print(input_train[trainEx,])
+          print(epochNum)
+          print(trainEx)
         stop()
       }
-      
-      delta = outputList$output[trainEx,] - targetOutput[trainEx,]
+  
+      delta = outputList$output[trainEx,] - output_train[trainEx,]
       
       deltaWeightList[[synapseIndex]] = matrix(delta, 
                                                nrow=nrow(weightList[[synapseIndex]]), 
                                                ncol=ncol(weightList[[synapseIndex]]), byrow = T)
       
-      for(i in 1:ncol(outputList$activatedSums[[synapseIndex-1]])) {
-        gradWeightList[[synapseIndex]][i,] = deltaWeightList[[synapseIndex]][i, ] * outputList$activatedSums[[synapseIndex-1]][trainEx, i]
-      }
+      gradWeightList[[synapseIndex]][] = deltaWeightList[[synapseIndex]][] * outputList$activatedSums[[synapseIndex-1]][trainEx,]
       
       gradBiasList[[synapseIndex]] = matrix(delta, 
                                             nrow=nrow(biasList[[synapseIndex]]), 
@@ -144,30 +144,27 @@ SGD = function(inputMat, weightList, biasList, outputList, targetOutput, learnin
       
       while(synapseIndex > 1) {
         synapseIndex = synapseIndex - 1
-        
-        for(i in 1:ncol(gradWeightList[[synapseIndex]])) {
-          delta = reluDerivative(outputList$activatedSums[[synapseIndex]][trainEx, i]) * 
-            sum(c(weightList[[synapseIndex+1]][i,]) * c(deltaWeightList[[synapseIndex+1]][,]))
-          deltaWeightList[[synapseIndex]][,] = delta
-            
-          if(synapseIndex == 1) {
-            gradWeightList[[synapseIndex]][,] = delta * inputMat[trainEx,]
-              
-          } else {
-            gradWeightList[[synapseIndex]][,] = delta * outputList$activatedSums[[synapseIndex-1]][trainEx, ]
-          }
+        delta = reluDerivative(outputList$activatedSums[[synapseIndex]][trainEx,]) * 
+          rowSums(weightList[[synapseIndex+1]] * deltaWeightList[[synapseIndex+1]])
+       
+        for(i in 1:nrow(deltaWeightList[[synapseIndex]])) {
+          deltaWeightList[[synapseIndex]][i,] = delta
         }
         
-        for(i in 1:ncol(gradBiasList[[synapseIndex]])) {
-          delta = reluDerivative(outputList$activatedSums[[synapseIndex]][trainEx, i]) * 
-            sum(c(weightList[[synapseIndex+1]][i,]) * c(deltaWeightList[[synapseIndex+1]][i,]))
-          gradBiasList[[synapseIndex]][, i] = delta
+        for(i in 1:nrow(gradBiasList[[synapseIndex]])) {
+          gradBiasList[[synapseIndex]][i,] = delta
         }
-  
+        
+        if(synapseIndex == 1) {
+          gradWeightList[[synapseIndex]] = deltaWeightList[[synapseIndex]] * input_train[trainEx,]
+        } else {
+          gradWeightList[[synapseIndex]] = deltaWeightList[[synapseIndex]] * outputList$activatedSums[[synapseIndex-1]][trainEx, ]
+        }
+        
       }
       
       synapseIndex = length(weightList)
-      
+
       for(i in 1:synapseIndex) {
         weightList[[i]] = weightList[[i]] - (learningRate * gradWeightList[[i]])
         biasList[[i]] = biasList[[i]] - (learningRate * gradBiasList[[i]])
@@ -175,7 +172,7 @@ SGD = function(inputMat, weightList, biasList, outputList, targetOutput, learnin
       
     }
    
-    if(epochNum%%5==0)  {
+    if(epochNum%%5==0 || T)  {
       newOutput = forwardProp(origInput_mat, weightList, biasList)
       newBiasList = list()
       for(i in 1:length(biasList)) {
@@ -194,10 +191,10 @@ SGD = function(inputMat, weightList, biasList, outputList, targetOutput, learnin
     }
     
     epochNum = epochNum + 1
-    randomSwap = sample(1:nrow(inputMat), nrow(inputMat), replace = F)
+    randomSwap = sample(1:nrow(input_train), nrow(input_train), replace = F)
     
-    inputMat = inputMat[randomSwap,]
-    targetOutput = targetOutput[randomSwap,]
+    input_train = input_train[randomSwap,]
+    output_train = output_train[randomSwap,]
   }
   
   print("yes")
@@ -221,8 +218,9 @@ test = function (input_mat, output_mat, weightList, biasList) {
   return(calcAccuracy(round(output$output), output_mat))
 }
 
+loadSheet = function(sheet = "FRC 2019 Match Scouting") {
 library(googlesheets)
-gs_sheet = gs_title("FRC 2019 Match Scouting (network test)")
+gs_sheet = gs_title(sheet)
 scout_sheet = gs_read(gs_sheet)
 
 data = data.frame(alliance = integer(),
@@ -349,7 +347,7 @@ while(index1 <= nrow(data_permute)) {
 }
 data_permute
 data_input = matrix(nrow = nrow(data_permute) / 6, ncol = 3 + ((ncol(data_permute)-4)*6) )
-data_output = matrix(nrow = nrow(data_permute) / 6, ncol = 2)
+data_output = matrix(nrow = nrow(data_permute) / 6, ncol = 3)
 
 index_data = 1
 index1 = 1
@@ -376,15 +374,23 @@ while(index_data <= nrow(data_input)) {
 index = 1
 for(i in 1:nrow(data_permute)) {
   if(i %% 6 == 1) {
-    if(data_permute[i, ncol(data_permute)] == 1) {
-      data_output[index,] = c(0,1)
-    } else if (data_permute[i, ncol(data_permute)] == 0) {
-      data_output[index,] = c(1,0)
+    if(data_permute[i, ncol(data_permute)] == 0) {
+      data_output[index,] = c(1,0,0)
+    } else if (data_permute[i, ncol(data_permute)] == 1) {
+      data_output[index,] = c(0,1,0)
+    } else if (data_permute[i, ncol(data_permute)] == 2) {
+      data_output[index,] = c(0,0,1)
     }
     index = index + 1
   }
 }
+return (list("input" = data_input, "output" = data_output))
+}
 
+sheet = "FRC 2019 Match Scouting"
+data = loadSheet(sheet)
+data_input = data$input
+data_output = data$output
 train_index = sample(1:nrow(data_input), round(.75 * nrow(data_input)))
 
 input_train = data_input[train_index,]
@@ -392,26 +398,27 @@ output_train = data_output[train_index,]
 
 input_test = data_input[-train_index,]
 output_test = data_output[-train_index,]
-
+output_train
 numTrainingExamples = nrow(input_train)
+numTrainingExamples
 numLayers = 3
 eluAlpha = .7
 learningRate = .005
 epoch = 100
-topology = c(ncol(input_train),74,2)
+topology = c(ncol(input_train),74,3)
 
 weightList = initWeightMats(topology)
 biasList = initBiasMats(topology, numTrainingExamples)
 outputList = forwardProp(input_train, weightList, biasList)
 
 parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test)
+library("rJava")
+#test(input_test, output_test, parameters$weights, parameters$biases)
 
-test(input_test, output_test, parameters$weights, parameters$biases)
-
-for(i in 1:length(parameters$weights)) {
-  write.table(parameters$weights[i], file = paste("weights", i,".csv", sep = ""), row.names = F, col.names = F, sep = " ")
-  write.table(parameters$biases[i], file = paste("biases", i,".csv", sep = ""), row.names = F, col.names = F, sep = " ")
-}
-w = read.csv(file = "weights1.csv", header = F, sep = " ")
-w = data.matrix(w)
-dim(w)
+#for(i in 1:length(weightList)) {
+#  write.table(weightList[[i]], file = paste("weights", i,".csv", sep = ""), row.names = F, col.names = F, sep = " ")
+#  write.table(biasList[[i]], file = paste("biases", i,".csv", sep = ""), row.names = F, col.names = F, sep = " ")
+#}
+#w = read.csv(file = "weights1.csv", header = F, sep = " ")
+#w = data.matrix(w)
+#dim(w)
