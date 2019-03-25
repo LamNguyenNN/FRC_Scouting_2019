@@ -410,7 +410,7 @@ topology = c(ncol(input_train),74,3)
 weightList = initWeightMats(topology)
 biasList = initBiasMats(topology, numTrainingExamples)
 outputList = forwardProp(input_train, weightList, biasList)
-
+#making changes
 parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test)
 library("rJava")
 #test(input_test, output_test, parameters$weights, parameters$biases)
