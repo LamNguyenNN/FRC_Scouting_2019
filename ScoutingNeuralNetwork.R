@@ -412,6 +412,14 @@ biasList = initBiasMats(topology, numTrainingExamples)
 outputList = forwardProp(input_train, weightList, biasList)
 #making changes
 parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test)
+<<<<<<< HEAD
+
+test(input_test, output_test, parameters$weights, parameters$biases)
+
+install.packages("gpuR")
+Sys.setenv(OPENCL_LIB64 = "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/lib/x64")
+library(gpuR)
+=======
 library("rJava")
 #test(input_test, output_test, parameters$weights, parameters$biases)
 
@@ -422,3 +430,4 @@ library("rJava")
 #w = read.csv(file = "weights1.csv", header = F, sep = " ")
 #w = data.matrix(w)
 #dim(w)
+>>>>>>> e6988602c7f4178ac4cc2bdbc440c35d4bb73e6e
