@@ -409,5 +409,6 @@ parameters = SGD(input_train, weightList, biasList, outputList, output_train, le
 
 test(input_test, output_test, parameters$weights, parameters$biases)
 
-
-
+install.packages("gpuR")
+Sys.setenv(OPENCL_LIB64 = "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/lib/x64")
+library(gpuR)
