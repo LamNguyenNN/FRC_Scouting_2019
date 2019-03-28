@@ -247,6 +247,46 @@ loadSheet = function(sheet = "FRC 2019 Match Scouting") {
   library(googlesheets)
   gs_sheet = gs_title(sheet)
   scout_sheet = gs_read(gs_sheet)
+  scout_sheet
+  data = data.frame(alliance = integer(),
+                    hatches_setup = integer(), balls_setup = integer(),
+                    cross_line = double(),
+                    hatches_auto_center = double(), hatches_auto_lv1 = double(), hatches_auto_lv2 = double(), hatches_auto_lv3 = double(),
+                    balls_auto_center = double(), balls_auto_lv1 = double(), balls_auto_lv2 = double(), balls_auto_lv3 = double(),
+                    prep_teleop = integer(),
+                    hatches_teleop_center = double(), hatches_teleop_lv1 = double(), hatches_teleop_lv2 = double(), hatches_teleop_lv3 = double(),
+                    balls_teleop_center = double(), balls_teleop_lv1 = double(), balls_teleop_lv2 = double(), balls_teleop_lv3 = double(),
+                    climb_level = double(),
+                    radio_problems = integer(),
+                    winner = integer(), stringsAsFactors = F)
+  useful_columns = c(1, 3:25)
+  index_input = 1
+  for(i in 4:nrow(scout_sheet)) {
+    if(is.na(scout_sheet[i, 1])) {
+      data[index_input,] = scout_sheet[i, useful_columns]
+      index_input = index_input + 1
+      next
+    } else if(scout_sheet[i, 1] == "Blue") {
+      scout_sheet[i, 1] = 0
+    } else if (scout_sheet[i, 1] == "Red") {
+      scout_sheet[i, 1] = 1
+    } else {
+      next
+    }
+    
+    data[index_input,] = scout_sheet[i, useful_columns]
+    index_input = index_input + 1
+  }
+  
+  data = data.matrix(data)
+  
+  return (data)
+  
+}
+
+loadCSV = function(csv = "FRC 2019 Match Scouting") {
+  
+  read.csv(file = csv, header = F, sep = ",")
   
   data = data.frame(alliance = integer(),
                     hatches_setup = integer(), balls_setup = integer(),
@@ -259,7 +299,7 @@ loadSheet = function(sheet = "FRC 2019 Match Scouting") {
                     climb_level = double(),
                     radio_problems = integer(),
                     winner = integer(), stringsAsFactors = F)
-  scout_sheet
+  
   useful_columns = c(1, 3:25)
   index_input = 1
   for(i in 4:nrow(scout_sheet)) {
@@ -424,7 +464,7 @@ processSheet = function(data) {
 }
 
 sheet = "FRC 2019 Match Scouting (network test)"
-data = processSheet(loadSheet(sheet))
+data = processSheet(loadCSV("test.csv"))
 data_input = data$input
 data_output = data$output
 train_index = sample(1:nrow(data_input), round(.75 * nrow(data_input)))
@@ -459,3 +499,7 @@ test(data_input[train_index,], data_output[train_index,], weightList, biasList)
 parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test, T, T, load_epoch_num)
 
 deleteAllParameters()
+
+read.csv(file = "FRC 2019 Match Scouting (network test) - Sheet1.csv")
+w = read.csv(file = "test.csv", header = F, sep = ",")
+
