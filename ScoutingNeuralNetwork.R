@@ -25,6 +25,14 @@ loadParams = function(weightList, biasList, epochNum) {
   
 }
 
+reinit_bias_list = function(biasList, numTrainingExamples) {
+
+  for(i in 1:length(biasList)) {
+    biasList[[i]] = matrix(data=biasList[[i]][1,], nrow = numTrainingExamples, ncol = ncol(biasList[[i]]), byrow = T)
+  }
+  return (biasList)
+}
+
 deleteAllParameters = function() {
   do.call(file.remove, list(list.files("parameters", full.names = TRUE)))
 }
@@ -211,6 +219,8 @@ SGD = function(input_train, weightList, biasList, outputList, output_train, lear
         prevCost = currCost
       }
     }
+    
+    print(epochNum)
     
     epochNum = epochNum + 1
     randomSwap = sample(1:nrow(input_train), nrow(input_train), replace = F)
@@ -463,12 +473,21 @@ processSheet = function(data) {
   return (list("input" = data_input, "output" = data_output))
 }
 
-sheet = "FRC 2019 Match Scouting (network test)"
-data = processSheet(loadCSV("test.csv"))
+#init
+sheet = "FRC 2019 Match Scouting"
+data = processSheet(loadSheet(sheet))
 data_input = data$input
 data_output = data$output
 train_index = sample(1:nrow(data_input), round(.75 * nrow(data_input)))
 
+numLayers = 3
+eluAlpha = .7
+learningRate = .005
+epoch = 15
+
+weightList = initWeightMats(topology)
+biasList = initBiasMats(topology, numTrainingExamples)
+outputList = forwardProp(input_train, weightList, biasList)
 
 #train from scratch
 
@@ -481,30 +500,38 @@ input_test = data_input[-train_index,]
 output_test = data_output[-train_index,]
 
 numTrainingExamples = nrow(input_train)
-numLayers = 3
-eluAlpha = .7
-learningRate = .005
-epoch = 15
-topology = c(ncol(input_train),74,3)
 
-weightList = initWeightMats(topology)
-biasList = initBiasMats(topology, numTrainingExamples)
-outputList = forwardProp(input_train, weightList, biasList)
+topology = c(ncol(input_train),74,3)
 
 parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test, T)
 
 
 #Loading previous epoch
-load_epoch_num = 20
-newParams = loadParams(weightList, biasList, load_epoch_num)
-weightList = newParams$weightList
-biasList = newParams$biasList
+sheet = "FRC 2019 Match Scouting"
+data = processSheet(loadSheet(sheet))
+data_input = data$input
+data_output = data$output
+train_index = sample(1:nrow(data_input), round(.75 * nrow(data_input)))
 
 input_train = data_input[train_index,]
 output_train = data_output[train_index,]
 
 input_test = data_input[-train_index,]
 output_test = data_output[-train_index,]
+
+numTrainingExamples = nrow(input_train)
+
+numTrainingExamples
+
+load_epoch_num = 20
+newParams = loadParams(weightList, biasList, load_epoch_num)
+weightList = newParams$weightList
+biasList = newParams$biasList
+dim(biasList[[1]])
+biasList = reinit_bias_list(biasList, numTrainingExamples)
+dim(biasList[[1]])
+
+topology = c(ncol(input_train),74,3)
 
 test(data_input[train_index,], data_output[train_index,], weightList, biasList)
 parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test, T, T, load_epoch_num)
