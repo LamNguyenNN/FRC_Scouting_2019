@@ -100,7 +100,8 @@ forwardProp = function(inputMat, weightMats, biasMats) {
 }
 
 MSECost = function(targetOutput, netOutput) {
-  error = (1/nrow(targetOutput)) * sum( (1/ncol(targetOutput))*(rowSums((targetOutput - netOutput) ^ 2)) ) return(error)
+  error = (1/nrow(targetOutput)) * sum( (1/ncol(targetOutput))*(rowSums((targetOutput - netOutput) ^ 2)) ) 
+  return(error)
 }
 
 CrossEntropyCost = function(targetOutput, netOutput) {
@@ -294,10 +295,10 @@ loadSheet = function(sheet = "FRC 2019 Match Scouting") {
   
 }
 
-loadCSV = function(csv = "FRC 2019 Match Scouting") {
+loadCSV = function(csv = "FRC 2019 Match Scouting.csv") {
   
-  read.csv(file = csv, header = F, sep = ",")
-  
+  scout_sheet = read.csv(file = csv, header = F, sep = ",", na.strings = "", stringsAsFactors = F )
+
   data = data.frame(alliance = integer(),
                     hatches_setup = integer(), balls_setup = integer(),
                     cross_line = double(),
@@ -312,7 +313,7 @@ loadCSV = function(csv = "FRC 2019 Match Scouting") {
   
   useful_columns = c(1, 3:25)
   index_input = 1
-  for(i in 4:nrow(scout_sheet)) {
+  for(i in 5:nrow(scout_sheet)) {
     if(is.na(scout_sheet[i, 1])) {
       data[index_input,] = scout_sheet[i, useful_columns]
       index_input = index_input + 1
@@ -328,9 +329,9 @@ loadCSV = function(csv = "FRC 2019 Match Scouting") {
     data[index_input,] = scout_sheet[i, useful_columns]
     index_input = index_input + 1
   }
-  
+ 
   data = data.matrix(data)
-  
+ 
   return (data)
   
 }
@@ -474,8 +475,11 @@ processSheet = function(data) {
 }
 
 #init
-sheet = "FRC 2019 Match Scouting"
-data = processSheet(loadSheet(sheet))
+#sheet = "FRC 2019 Match Scouting"
+#data = processSheet(loadSheet(sheet))
+sheet = "FRC 2019 Match Scouting.csv"
+loadCSV(sheet)
+data = processSheet(loadCSV(sheet))
 data_input = data$input
 data_output = data$output
 train_index = sample(1:nrow(data_input), round(.75 * nrow(data_input)))
@@ -523,7 +527,7 @@ numTrainingExamples = nrow(input_train)
 
 numTrainingExamples
 
-load_epoch_num = 20
+load_epoch_num = 30
 newParams = loadParams(weightList, biasList, load_epoch_num)
 weightList = newParams$weightList
 biasList = newParams$biasList
