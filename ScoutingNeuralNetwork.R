@@ -8,8 +8,25 @@ initWeightMats = function(topo) {
   return (weightMats)
 }
 
-loadWeights = function(weightsCSV) {
+saveParams = function(weightList, biasList, epochNum) {
+  for(i in 1:length(weightList)) {
+    write.table(weightList[[i]], file = paste("parameters/weights", i,"-", epochNum, ".csv", sep = ""), row.names = F, col.names = F, sep = " ")
+    write.table(biasList[[i]],file = paste("parameters/biases", i,"-", epochNum, ".csv", sep = ""), row.names = F, col.names = F, sep = " ")
+  }
+}
+
+loadParams = function(weightList, biasList, epochNum) {
+  for(i in 1:length(weightList)) {
+    weightList[[i]] = data.matrix(read.csv(file = paste("parameters/weights", i,"-", epochNum, ".csv", sep = ""), header = F, sep = " "))
+    biasList[[i]] = data.matrix(read.csv(file = paste("parameters/biases", i,"-", epochNum, ".csv", sep = ""), header = F, sep = " "))
+  }
   
+  return (list("weightList" = weightList, "biasList" = biasList))
+  
+}
+
+deleteAllParameters = function() {
+  do.call(file.remove, list(list.files("parameters", full.names = TRUE)))
 }
 
 initBiasMats = function(topo, numInputSets) {
@@ -94,7 +111,7 @@ calcAccuracy = function(output, trainOutput) {
   return (accuracy)
 }
 
-SGD = function(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test) {
+SGD = function(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test, loop, preloaded = F, load_epoch_num = 0) {
   origInput_mat = input_train
   origOutput_mat = output_train
   synapseIndex = length(weightList)
@@ -103,9 +120,14 @@ SGD = function(input_train, weightList, biasList, outputList, output_train, lear
   prevCost = 0
   currCost = 0
   
+  if(preloaded) {
+    epochNum = load_epoch_num + 1
+  }
+  
   deltaWeightList = list()
   gradWeightList = list()
   gradBiasList = list() #Gradient is same as delta for bias
+  newBiasList = list()
   
   for(i in 1:synapseIndex) {
     deltaWeightList[[i]] = matrix(nrow=nrow(weightList[[i]]),
@@ -116,14 +138,10 @@ SGD = function(input_train, weightList, biasList, outputList, output_train, lear
                                ncol=ncol(biasList[[i]]), byrow = T)
   }
   
-  while(T) {
+  while(epochNum <= epoch || loop) {
     for(trainEx in 1:nrow(output_train)) {
       outputList = forwardProp(input_train, weightList, biasList)
       if(anyNA(outputList$output)) {
-        #print(outputList$activatedSums)
-        #print(outputList$unact)
-        #print(outputList$output)
-        #print("SGD")
         print(input_train[trainEx,])
         print(epochNum)
         print(trainEx)
@@ -172,9 +190,13 @@ SGD = function(input_train, weightList, biasList, outputList, output_train, lear
       
     }
     
-    if(epochNum%%5==0 || T)  {
+    if(epochNum%%10==0)  {
+      saveParams(weightList, biasList, epochNum)
+    }
+    
+    #print accuracy
+    if(F) {
       newOutput = forwardProp(origInput_mat, weightList, biasList)
-      newBiasList = list()
       for(i in 1:length(biasList)) {
         newBiasList[[i]] = biasList[[i]][1,]
       }
@@ -200,8 +222,7 @@ SGD = function(input_train, weightList, biasList, outputList, output_train, lear
   print("yes")
   newOutput = forwardProp(origInput_mat, weightList, biasList)
   print(round(newOutput$output), digits = 3)
-  
-  newBiasList = list()
+
   for(i in 1:length(biasList)) {
     newBiasList[[i]] = biasList[[i]][1,]
   }
@@ -211,11 +232,15 @@ SGD = function(input_train, weightList, biasList, outputList, output_train, lear
 }
 
 test = function (input_mat, output_mat, weightList, biasList) {
-  for(i in 1:length(biasList)) {
-    biasList[[i]] = matrix(rep(biasList[[i]], nrow(input_mat)), ncol = length(biasList[[i]]), byrow = T)
-  }
   output = forwardProp(input_mat, weightList, biasList)
-  return(calcAccuracy(round(output$output), output_mat))
+  
+  for(i in 1:length(biasList)) {
+    biasList[[i]] = biasList[[i]][1,]
+  }
+  accuracy = calcAccuracy (round(output$output), output_mat)
+  currCost = CrossEntropyCost(output_mat, output$output)
+  cat("acc: ", as.numeric(accuracy), ", loss:", currCost, "\n")
+
 }
 
 loadSheet = function(sheet = "FRC 2019 Match Scouting") {
@@ -255,7 +280,13 @@ loadSheet = function(sheet = "FRC 2019 Match Scouting") {
   }
   
   data = data.matrix(data)
-  data
+  
+  return (data)
+  
+}
+
+processSheet = function(data) {
+  
   #Fixing "NA" in alliances, hatches_setup, balls_setup, output
   for(i in 1:nrow(data)) {
     if(is.na(data[i, "alliance"])) {
@@ -281,17 +312,22 @@ loadSheet = function(sheet = "FRC 2019 Match Scouting") {
     }
     
   }
-  data
   # normalizing "cross line"
   data[,"cross_line"] = data[,"cross_line"] *.5 
   
+  # normalizing setup
+  max_game_pieces_setup = 6
+  data[,c("hatches_setup", "balls_setup")] = ifelse(
+    data[,c("hatches_setup", "balls_setup")] > max_game_pieces_setup, 
+    1, data[,c("hatches_setup", "balls_setup")]/ max_game_pieces_setup)
+  
   # normalizing hatches
   max_hatches_center = 8
-  max_hatches_rocket_level = 8
+  max_hatches_rocket_level = 4
   
-  data[,c("hatches_setup", "hatches_auto_center", "hatches_teleop_center")] = ifelse(
-    data[,c("hatches_setup", "hatches_auto_center", "hatches_teleop_center")] > max_hatches_center, 
-    1, data[,c("hatches_setup", "hatches_auto_center", "hatches_teleop_center")]/ max_hatches_center)
+  data[,c("hatches_auto_center", "hatches_teleop_center")] = ifelse(
+    data[,c("hatches_auto_center", "hatches_teleop_center")] > max_hatches_center, 
+    1, data[,c("hatches_auto_center", "hatches_teleop_center")]/ max_hatches_center)
   
   data[,c("hatches_auto_lv1", "hatches_auto_lv2", "hatches_auto_lv3", "hatches_teleop_lv1", "hatches_teleop_lv2", "hatches_teleop_lv3")] =
     ifelse(data[,c("hatches_auto_lv1", "hatches_auto_lv2", "hatches_auto_lv3", 
@@ -300,11 +336,11 @@ loadSheet = function(sheet = "FRC 2019 Match Scouting") {
                       "hatches_teleop_lv1", "hatches_teleop_lv2", "hatches_teleop_lv3")] / max_hatches_rocket_level )
   
   max_balls_center = 8
-  max_balls_rocket_level = 8
+  max_balls_rocket_level = 4
   
-  data[,c("balls_setup", "balls_auto_center", "balls_teleop_center")] = ifelse(
-    data[,c("balls_setup", "balls_auto_center", "balls_teleop_center")] > max_balls_center, 
-    1, data[,c("balls_setup", "balls_auto_center", "balls_teleop_center")]/ max_balls_center)
+  data[,c("balls_auto_center", "balls_teleop_center")] = ifelse(
+    data[,c("balls_auto_center", "balls_teleop_center")] > max_balls_center, 
+    1, data[,c("balls_auto_center", "balls_teleop_center")] / max_balls_center)
   
   data[,c("balls_auto_lv1", "balls_auto_lv2", "balls_auto_lv3", "balls_teleop_lv1", "balls_teleop_lv2", "balls_teleop_lv3")] =
     ifelse(data[,c("balls_auto_lv1", "balls_auto_lv2", "balls_auto_lv3", 
@@ -387,8 +423,8 @@ loadSheet = function(sheet = "FRC 2019 Match Scouting") {
   return (list("input" = data_input, "output" = data_output))
 }
 
-sheet = "FRC 2019 Match Scouting"
-data = loadSheet(sheet)
+sheet = "FRC 2019 Match Scouting (network test)"
+data = processSheet(loadSheet(sheet))
 data_input = data$input
 data_output = data$output
 train_index = sample(1:nrow(data_input), round(.75 * nrow(data_input)))
@@ -398,27 +434,28 @@ output_train = data_output[train_index,]
 
 input_test = data_input[-train_index,]
 output_test = data_output[-train_index,]
-output_train
+
 numTrainingExamples = nrow(input_train)
-numTrainingExamples
 numLayers = 3
 eluAlpha = .7
 learningRate = .005
-epoch = 100
+epoch = 15
 topology = c(ncol(input_train),74,3)
 
 weightList = initWeightMats(topology)
 biasList = initBiasMats(topology, numTrainingExamples)
 outputList = forwardProp(input_train, weightList, biasList)
-#making changes
-parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test)
-library("rJava")
-#test(input_test, output_test, parameters$weights, parameters$biases)
 
-#for(i in 1:length(weightList)) {
-#  write.table(weightList[[i]], file = paste("weights", i,".csv", sep = ""), row.names = F, col.names = F, sep = " ")
-#  write.table(biasList[[i]], file = paste("biases", i,".csv", sep = ""), row.names = F, col.names = F, sep = " ")
-#}
-#w = read.csv(file = "weights1.csv", header = F, sep = " ")
-#w = data.matrix(w)
-#dim(w)
+parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test, T)
+
+
+#Loading previous epoch
+load_epoch_num = 20
+newParams = loadParams(weightList, biasList, load_epoch_num)
+weightList = newParams$weightList
+biasList = newParams$biasList
+
+test(data_input[train_index,], data_output[train_index,], weightList, biasList)
+parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test, T, T, load_epoch_num)
+
+deleteAllParameters()
