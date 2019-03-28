@@ -469,6 +469,11 @@ data_input = data$input
 data_output = data$output
 train_index = sample(1:nrow(data_input), round(.75 * nrow(data_input)))
 
+
+#train from scratch
+
+deleteAllParameters()
+
 input_train = data_input[train_index,]
 output_train = data_output[train_index,]
 
@@ -495,11 +500,13 @@ newParams = loadParams(weightList, biasList, load_epoch_num)
 weightList = newParams$weightList
 biasList = newParams$biasList
 
+input_train = data_input[train_index,]
+output_train = data_output[train_index,]
+
+input_test = data_input[-train_index,]
+output_test = data_output[-train_index,]
+
 test(data_input[train_index,], data_output[train_index,], weightList, biasList)
 parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test, T, T, load_epoch_num)
 
-deleteAllParameters()
-
-read.csv(file = "FRC 2019 Match Scouting (network test) - Sheet1.csv")
-w = read.csv(file = "test.csv", header = F, sep = ",")
 
