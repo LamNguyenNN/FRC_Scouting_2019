@@ -523,7 +523,7 @@ numTrainingExamples = nrow(input_train)
 
 numTrainingExamples
 
-load_epoch_num = 20
+load_epoch_num = 90
 newParams = loadParams(weightList, biasList, load_epoch_num)
 weightList = newParams$weightList
 biasList = newParams$biasList
@@ -533,7 +533,10 @@ dim(biasList[[1]])
 
 topology = c(ncol(input_train),74,3)
 
+biasList = reinit_bias_list(biasList, nrow(data_input[-train_index,]))
+
 test(data_input[train_index,], data_output[train_index,], weightList, biasList)
-parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test, T, T, load_epoch_num)
+epoch = 160
+parameters = SGD(input_train, weightList, biasList, outputList, output_train, learningRate, epoch, input_test, output_test, F, T, load_epoch_num)
 
 
